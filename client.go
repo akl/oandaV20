@@ -3,6 +3,7 @@ package oandaV20
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 )
@@ -34,8 +35,12 @@ type Client struct {
 	client http.Client
 }
 
+/* streaming q&a
+https://stackoverflow.com/questions/42959165/stream-pricing-from-oanda-v20-rest-api-using-python-requests
+*/
+
 func NewClient(accessToken string, environment string,
-	streaming bool) (*Client, error) {
+	streaming bool, timeoutSeconds int, keepAliveSeconds int) (*Client, error) {
 
 	client := &Client{
 		Token:                accessToken,
@@ -44,7 +49,14 @@ func NewClient(accessToken string, environment string,
 		Agent:                "oandaV20(go)/0.0.0",
 		DatetimeFormat:       "RFC3339",
 		client: http.Client{
-			Timeout: time.Second * 10,
+			Timeout: time.Duration(timeoutSeconds) * time.Second,
+			Transport: &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout:   time.Duration(timeoutSeconds) * time.Second,
+					KeepAlive: time.Duration(keepAliveSeconds) * time.Second,
+				}).Dial,
+				DisableKeepAlives: false,
+			},
 		},
 	}
 	if environment == PracticeEnvironment {

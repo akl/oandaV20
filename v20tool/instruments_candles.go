@@ -15,7 +15,9 @@ import (
 type InstrumentsCandlesOptions struct {
 	RootOptions
 
-	Save string
+	Save      string
+	Timeout   int
+	KeepAlive int
 
 	Instrument        string
 	Price             string
@@ -39,6 +41,8 @@ func build_argparse_instruments_candles(pcmd *argparse.Command) {
 			RootOptions: RootOptions{
 				ConfigFile: kDefaultConfigFile,
 			},
+			Timeout:   30,
+			KeepAlive: 10,
 		},
 	})
 
@@ -46,6 +50,18 @@ func build_argparse_instruments_candles(pcmd *argparse.Command) {
 		Switches: []string{"--save"},
 		MetaVar:  "FILE",
 		Help:     "Save the raw JSON to FILE",
+	})
+
+	ap.Add(&argparse.Argument{
+		Switches: []string{"--timeout"},
+		MetaVar:  "SECONDS",
+		Help:     "Set a timeout of this many SECONDS when talking to OANDA via HTTP/REST.",
+	})
+
+	ap.Add(&argparse.Argument{
+		Switches: []string{"--keep-alive"},
+		MetaVar:  "SECONDS",
+		Help:     "Set a KeepAlive of this many SECONDS when talking to OANDA via HTTP/REST.",
 	})
 
 	ap.Add(&argparse.Argument{
@@ -71,13 +87,15 @@ func build_argparse_instruments_candles(pcmd *argparse.Command) {
 
 	ap.Add(&argparse.Argument{
 		Switches: []string{"--from"},
-		Help:     "Start time, in RFC3339 format: 2006-01-02T15:04:05Z07:00",
+		Help: `Start time, in RFC3339 format: 2006-01-02T15:04:05-07:00
+			or 2006-01-02T15:04:05Z`,
 	})
 
 	ap.Add(&argparse.Argument{
 		Switches: []string{"--to"},
 		Help: `End time, in RFC3339 format: 2006-01-02T15:04:05Z07:00
-			Or, the word "now" can be given.`,
+			or 2006-01-02T15:04:05Z. In addition, the word "now"
+			"now" can be given.`,
 	})
 
 	ap.Add(&argparse.Argument{
@@ -132,7 +150,7 @@ func RunInstrumentsCandles(cmd *argparse.Command, values argparse.Values) error 
 	}
 
 	client, err := oandaV20.NewClient(cfg.AccessToken,
-		cfg.Environment, cfg.Streaming)
+		cfg.Environment, cfg.Streaming, opts.Timeout, opts.KeepAlive)
 	if err != nil {
 		return err
 	}
@@ -188,7 +206,7 @@ func RunInstrumentsCandles(cmd *argparse.Command, values argparse.Values) error 
 
 	// Save to a file?
 	if opts.Save != "" {
-		body, err := client.GetBidAskCandlesBytes(opts.Instrument, req)
+		body, err := client.GetInstrumentCandlesBytes(opts.Instrument, req)
 		if err != nil {
 			return err
 		}
