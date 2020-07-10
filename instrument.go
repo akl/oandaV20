@@ -95,7 +95,7 @@ func (s *Client) GetInstrumentCandles(instrument string, cr *CandleRequest) (*In
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("response %s", string(body))
+	//log.Printf("response %s", string(body))
 
 	response := &InstrumentCandles{}
 	err = json.Unmarshal(body, response)
